@@ -1,0 +1,3 @@
+/mnt/d/desk/assignment/meeting/week1 experients and neural pull reading/Neural Pull/NeuralPull-Pytorch/CMakeFiles/resampling.dir
+/mnt/d/desk/assignment/meeting/week1 experients and neural pull reading/Neural Pull/NeuralPull-Pytorch/CMakeFiles/edit_cache.dir
+/mnt/d/desk/assignment/meeting/week1 experients and neural pull reading/Neural Pull/NeuralPull-Pytorch/CMakeFiles/rebuild_cache.dir

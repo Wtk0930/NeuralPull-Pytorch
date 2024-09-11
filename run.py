@@ -71,7 +71,7 @@ class Runner:
         for iter_i in tqdm(range(res_step)):
             self.update_learning_rate_np(iter_i)
 
-            # p q p_gt
+            # t_i q p_gt
             points, samples, point_gt = self.dataset_np.np_train_data(batch_size)
                 
             samples.requires_grad = True
@@ -82,8 +82,11 @@ class Runner:
 
             # get the gradient of the sdf
             grad_norm = F.normalize(gradients_sample, dim=1)                # 5000x3
+
+            # move the sample points towards the surface
             sample_moved = samples - grad_norm * sdf_sample                 # 5000x3
 
+            # loss function
             loss_sdf = torch.linalg.norm((points - sample_moved), ord=2, dim=-1).mean()
             
             loss = loss_sdf
