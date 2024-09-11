@@ -7,23 +7,26 @@ import trimesh
 
 class NPullNetwork(nn.Module):
     def __init__(self,
-                 d_in,
-                 d_out,
-                 d_hidden,
-                 n_layers,
-                 skip_in=(4,),
-                 multires=0,
-                 bias=0.5,
-                 scale=1,
-                 geometric_init=True,
-                 weight_norm=True,
-                 inside_outside=False):
+                 d_in,  # Input dimension size
+                 d_out,  # Output dimension size
+                 d_hidden,  # Hidden layer dimension size
+                 n_layers,  # Number of layers in the network
+                 skip_in=(4,),  # Indices of layers that should use skip connections
+                 multires=0,  # Multi-resolution embedding (not used if 0)
+                 bias=0.5,  # Bias term for final layer initialization
+                 scale=1,  # Scale factor for output (not used here)
+                 geometric_init=True,  # Whether to use geometric initialization
+                 weight_norm=True,  # Whether to apply weight normalization
+                 inside_outside=False):  # Condition for geometric initialization in the final layer
         super(NPullNetwork, self).__init__()
 
+        # get all the dims for input + hidden + output
+        # [3, 256, 256, 256, 256, 256, 256, 256, 256, 1]
         dims = [d_in] + [d_hidden for _ in range(n_layers)] + [d_out]
 
         self.embed_fn_fine = None
 
+        # update the number of layers to the dims
         self.num_layers = len(dims)
         self.skip_in = skip_in
         self.scale = scale
@@ -58,8 +61,10 @@ class NPullNetwork(nn.Module):
 
             if weight_norm:
                 lin = nn.utils.weight_norm(lin)
+            # dynamically create the layers
             setattr(self, "lin" + str(l), lin)
-            
+        
+        # activation function for the network
         self.activation = nn.ReLU()
 
     def forward(self, inputs):
@@ -70,10 +75,14 @@ class NPullNetwork(nn.Module):
         x = inputs
         for l in range(0, self.num_layers - 1):
             lin = getattr(self, "lin" + str(l))
+
+            # use skip connections
             if l in self.skip_in:
                 x = torch.cat([x, inputs], 1) / np.sqrt(2)
 
             x = lin(x)
+
+            # apply activation function to all layers except the last one
             if l < self.num_layers - 2:
                 x = self.activation(x)
 

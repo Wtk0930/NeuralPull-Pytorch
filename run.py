@@ -71,11 +71,16 @@ class Runner:
         for iter_i in tqdm(range(res_step)):
             self.update_learning_rate_np(iter_i)
 
+            # p q p_gt
             points, samples, point_gt = self.dataset_np.np_train_data(batch_size)
                 
             samples.requires_grad = True
             gradients_sample = self.sdf_network.gradient(samples).squeeze() # 5000x3
+
+            # get the sdf value -- the distance to the surface
             sdf_sample = self.sdf_network.sdf(samples)                      # 5000x1
+
+            # get the gradient of the sdf
             grad_norm = F.normalize(gradients_sample, dim=1)                # 5000x3
             sample_moved = samples - grad_norm * sdf_sample                 # 5000x3
 
