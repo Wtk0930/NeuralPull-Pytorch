@@ -107,7 +107,13 @@ class Runner:
         weight = weight / (weight.sum(dim=-1, keepdim=True) + 1e-12)  # (5000, k), 对每个 patch 的点归一化
 
         # 计算 IMLS 表面点 (5000, 3)
-        imls_surface_points = (neighbor_points * weight.unsqueeze(-1)).sum(dim=1)  # (5000, 3)
+        project_dist = ((samples.unsqueeze(1) - neighbor_points) * neighbor_grad_norm).sum(2)  # (5000, k)
+
+        # 计算加权的IMLS距离
+        imls_dist = (project_dist * weight).sum(1, keepdim=True)  # (5000, 1)
+
+        # 使用IMLS距离修正查询点的位置以得到表面点
+        imls_surface_points = samples - imls_dist * grad_norm  # (5000, 3)
 
         return imls_surface_points
 
