@@ -98,6 +98,30 @@ class NPullNetwork(nn.Module):
             retain_graph=True,
             only_inputs=True)[0]
         return gradients.unsqueeze(1)
+    
+    def finite_gradient(self, x, eps=1e-4):
+        batch_size, dim = x.shape
+        
+        # Create perturbations for all dimensions in one shot
+        perturb = torch.eye(dim, device=x.device).unsqueeze(0) * eps  # Shape: (1, 3, 3)
+        perturb = perturb.repeat(batch_size, 1, 1)  # Shape: (batch_size, 3, 3)
+
+        # Expand x to match perturbations
+        x_expanded = x.unsqueeze(1).expand_as(perturb)  # Shape: (batch_size, 3, 3)
+
+        # Perturb in both directions
+        x_pos = x_expanded + perturb
+        x_neg = x_expanded - perturb
+
+        # Compute the SDF for all perturbed inputs
+        sdf_pos = self.sdf(x_pos.view(-1, dim)).view(batch_size, dim)
+        sdf_neg = self.sdf(x_neg.view(-1, dim)).view(batch_size, dim)
+        
+        # Compute the finite difference gradient for all dimensions
+        grad = (sdf_pos - sdf_neg) / (2 * eps)
+        
+        return grad.unsqueeze(1)  # Shape: (batch_size, 1, 3)
+        
 
 
 def as_mesh(scene_or_mesh):

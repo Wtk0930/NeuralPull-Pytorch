@@ -71,12 +71,23 @@ class Runner:
         for iter_i in tqdm(range(res_step)):
             self.update_learning_rate_np(iter_i)
 
+            # shape of points: 5000x3
+            # shape of samples: 5000x3
             points, samples, point_gt = self.dataset_np.np_train_data(batch_size)
                 
             samples.requires_grad = True
-            gradients_sample = self.sdf_network.gradient(samples).squeeze() # 5000x3
+            gradients_sample1 = self.sdf_network.finite_gradient(samples).squeeze() # 5000x3
+            gradients_sample2 = self.sdf_network.gradient(samples).squeeze()       # 5000x3
+
+            grad_norm1 = F.normalize(gradients_sample1, dim=1)                # 5000x3
+            grad_norm2 = F.normalize(gradients_sample2, dim=1)                # 5000x3
+
+            # compare the gradients
+            # loss_grad = torch.linalg.norm((grad_norm1 - grad_norm2), ord=2, dim=-1).mean()
+            # print_log('iter:{:8>d} grad_l1 = {}'.format(self.iter_step, loss_grad), logger=logger)
+
             sdf_sample = self.sdf_network.sdf(samples)                      # 5000x1
-            grad_norm = F.normalize(gradients_sample, dim=1)                # 5000x3
+            grad_norm = F.normalize(gradients_sample1, dim=1)                # 5000x3
             sample_moved = samples - grad_norm * sdf_sample                 # 5000x3
 
             loss_sdf = torch.linalg.norm((points - sample_moved), ord=2, dim=-1).mean()
