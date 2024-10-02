@@ -39,27 +39,33 @@ class NPullNetwork(nn.Module):
             if geometric_init:
                 if l == self.num_layers - 2:
                     if not inside_outside:
-                        torch.nn.init.normal_(lin.weight, mean=np.sqrt(np.pi) / np.sqrt(dims[l]), std=0.0001)
+                        torch.nn.init.normal_(lin.weight, mean=np.sqrt(
+                            np.pi) / np.sqrt(dims[l]), std=0.0001)
                         torch.nn.init.constant_(lin.bias, -bias)
                     else:
-                        torch.nn.init.normal_(lin.weight, mean=-np.sqrt(np.pi) / np.sqrt(dims[l]), std=0.0001)
+                        torch.nn.init.normal_(
+                            lin.weight, mean=-np.sqrt(np.pi) / np.sqrt(dims[l]), std=0.0001)
                         torch.nn.init.constant_(lin.bias, bias)
                 elif multires > 0 and l == 0:
                     torch.nn.init.constant_(lin.bias, 0.0)
                     torch.nn.init.constant_(lin.weight[:, 3:], 0.0)
-                    torch.nn.init.normal_(lin.weight[:, :3], 0.0, np.sqrt(2) / np.sqrt(out_dim))
+                    torch.nn.init.normal_(
+                        lin.weight[:, :3], 0.0, np.sqrt(2) / np.sqrt(out_dim))
                 elif multires > 0 and l in self.skip_in:
                     torch.nn.init.constant_(lin.bias, 0.0)
-                    torch.nn.init.normal_(lin.weight, 0.0, np.sqrt(2) / np.sqrt(out_dim))
-                    torch.nn.init.constant_(lin.weight[:, -(dims[0] - 3):], 0.0)
+                    torch.nn.init.normal_(
+                        lin.weight, 0.0, np.sqrt(2) / np.sqrt(out_dim))
+                    torch.nn.init.constant_(
+                        lin.weight[:, -(dims[0] - 3):], 0.0)
                 else:
                     torch.nn.init.constant_(lin.bias, 0.0)
-                    torch.nn.init.normal_(lin.weight, 0.0, np.sqrt(2) / np.sqrt(out_dim))
+                    torch.nn.init.normal_(
+                        lin.weight, 0.0, np.sqrt(2) / np.sqrt(out_dim))
 
             if weight_norm:
                 lin = nn.utils.weight_norm(lin)
             setattr(self, "lin" + str(l), lin)
-            
+
         self.activation = nn.ReLU()
 
     def forward(self, inputs):
@@ -88,7 +94,6 @@ class NPullNetwork(nn.Module):
     def gradient(self, x):
         x.requires_grad_(True)
         y = self.sdf(x)
-        # y.requires_grad_(True)
         d_output = torch.ones_like(y, requires_grad=False, device=y.device)
         gradients = torch.autograd.grad(
             outputs=y,
@@ -98,16 +103,18 @@ class NPullNetwork(nn.Module):
             retain_graph=True,
             only_inputs=True)[0]
         return gradients.unsqueeze(1)
-    
-    def finite_gradient(self, x, eps=1e-4):
+
+    def finite_gradient(self, x, eps=1e-3):
         batch_size, dim = x.shape
-        
+
         # Create perturbations for all dimensions in one shot
-        perturb = torch.eye(dim, device=x.device).unsqueeze(0) * eps  # Shape: (1, 3, 3)
+        perturb = torch.eye(dim, device=x.device).unsqueeze(
+            0) * eps  # Shape: (1, 3, 3)
         perturb = perturb.repeat(batch_size, 1, 1)  # Shape: (batch_size, 3, 3)
 
         # Expand x to match perturbations
-        x_expanded = x.unsqueeze(1).expand_as(perturb)  # Shape: (batch_size, 3, 3)
+        x_expanded = x.unsqueeze(1).expand_as(
+            perturb)  # Shape: (batch_size, 3, 3)
 
         # Perturb in both directions
         x_pos = x_expanded + perturb
@@ -116,12 +123,11 @@ class NPullNetwork(nn.Module):
         # Compute the SDF for all perturbed inputs
         sdf_pos = self.sdf(x_pos.view(-1, dim)).view(batch_size, dim)
         sdf_neg = self.sdf(x_neg.view(-1, dim)).view(batch_size, dim)
-        
+
         # Compute the finite difference gradient for all dimensions
         grad = (sdf_pos - sdf_neg) / (2 * eps)
-        
+
         return grad.unsqueeze(1)  # Shape: (batch_size, 1, 3)
-        
 
 
 def as_mesh(scene_or_mesh):
@@ -138,9 +144,9 @@ def as_mesh(scene_or_mesh):
             # we lose texture information here
             mesh = trimesh.util.concatenate(
                 tuple(trimesh.Trimesh(vertices=g.vertices, faces=g.faces)
-                    for g in scene_or_mesh.geometry.values()))
+                      for g in scene_or_mesh.geometry.values()))
     else:
         print("is_mesh")
-        assert(isinstance(scene_or_mesh, trimesh.Trimesh))
+        assert (isinstance(scene_or_mesh, trimesh.Trimesh))
         mesh = scene_or_mesh
     return mesh
